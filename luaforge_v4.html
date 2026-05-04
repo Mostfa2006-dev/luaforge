@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuaForge — Roblox Lua AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/lua.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0b0d11;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --border-hover: #353c52;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #22d3ee;
+    --accent-glow: rgba(0,229,255,0.15);
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --muted2: #8892a4;
+    --green: #10b981;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --admin: #f59e0b;
+    --font-main: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
+  }
+
+  body { font-family: var(--font-main); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(11,13,17,0.96);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    gap: 1rem;
+  }
+
+  .logo { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); flex-shrink: 0; }
+  .logo span { color: var(--text); }
+
+  .nav-center {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-center::-webkit-scrollbar { display: none; }
+
+  .nav-tab {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--muted2);
+    font-family: var(--font-main);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+  .nav-tab.active { background: var(--accent2); color: #fff; }
+  .nav-tab.admin-tab { color: var(--admin); }
+  .nav-tab.admin-tab:hover { background: rgba(245,158,11,0.12); color: var(--admin); }
+  .nav-tab.admin-tab.active { background: var(--admin); color: #000; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .token-counter {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 99px;
+    white-space: nowrap;
+    display: none;
+  }
+  .token-counter.visible { display: block; }
+  .token-counter span { color: var(--accent); }
+
+  .badge { background: var(--accent); color: #000; font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; font-family: var(--font-mono); }
+  .badge-admin { background: var(--admin); color: #000; font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; font-family: var(--font-mono); }
+
+  .user-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 4px 12px 4px 6px;
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text);
+    cursor: default;
+    user-select: none;
+  }
+  .user-avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent2);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .user-avatar.admin-av { background: var(--admin); color: #000; }
+
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ─── PANELS ─── */
+  .panel { display: none; padding: 2rem; min-height: calc(100vh - 57px); position: relative; z-index: 1; }
+  .panel.active { display: block; }
+
+  /* ─── AUTH OVERLAY ─── */
+  #auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11,13,17,0.97);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+
+  .auth-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    margin: 1rem;
+    position: relative;
+  }
+
+  .auth-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+    text-align: center;
+  }
+  .auth-logo span { color: var(--text); }
+
+  .auth-subtitle {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--muted2);
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+  }
+
+  .auth-tabs {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted2);
+    font-family: var(--font-main);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: var(--radius-xs);
+    transition: all 0.2s;
+  }
+  .auth-tab.active { background: var(--accent2); color: #fff; }
+
+  .auth-field { margin-bottom: 1rem; }
+  .auth-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .auth-field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.87rem;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .auth-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.08); }
+
+  .auth-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+    letter-spacing: 0.3px;
+  }
+  .auth-btn:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,229,255,0.25); }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .auth-error {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: var(--radius-xs);
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: var(--red);
+    font-family: var(--font-mono);
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .auth-error.visible { display: block; }
+
+  .auth-rules {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    margin-top: 0.6rem;
+    line-height: 1.6;
+  }
+
+  /* ─── HOME ─── */
+  .hero { text-align: center; padding: 4rem 2rem 2rem; max-width: 720px; margin: 0 auto; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 99px;
+    padding: 4px 14px; font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--accent); letter-spacing: 1px; margin-bottom: 1.5rem;
+  }
+  .hero-eyebrow-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse-dot 2s infinite; }
+
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.7); } }
+
+  .hero h1 { font-size: clamp(2.4rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.08; margin-bottom: 1.25rem; letter-spacing: -1.5px; }
+  .hero h1 .hl { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero p { font-size: 1.05rem; color: var(--muted2); line-height: 1.75; margin-bottom: 2.5rem; max-width: 540px; margin-left: auto; margin-right: auto; }
+  .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; max-width: 960px; margin: 0 auto; }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.35rem; cursor: pointer; transition: all 0.22s; position: relative; overflow: hidden;
+  }
+  .feature-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--accent-glow), transparent); opacity: 0; transition: opacity 0.22s; }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,229,255,0.08); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feat-icon { font-size: 1.6rem; margin-bottom: 0.8rem; display: block; }
+  .feat-title { font-size: 0.92rem; font-weight: 700; margin-bottom: 0.35rem; color: var(--text); position: relative; }
+  .feat-desc { font-size: 0.78rem; color: var(--muted2); line-height: 1.6; position: relative; }
+
+  /* ─── TOOLS ─── */
+  .tool-container { max-width: 920px; margin: 0 auto; }
+  .tool-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+  .tool-title { font-size: 1.35rem; font-weight: 800; }
+
+  /* ─── BUTTONS ─── */
+  .btn { padding: 11px 22px; border-radius: var(--radius); border: none; font-family: var(--font-main); font-weight: 700; font-size: 0.87rem; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,229,255,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost { background: transparent; color: var(--muted2); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); }
+  .btn-purple { background: var(--accent2); color: #fff; }
+  .btn-purple:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-danger { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .btn-danger:hover { background: rgba(248,113,113,0.2); border-color: var(--red); }
+  .btn-warn { background: rgba(245,158,11,0.1); color: var(--admin); border: 1px solid rgba(245,158,11,0.3); }
+  .btn-warn:hover { background: rgba(245,158,11,0.2); border-color: var(--admin); }
+  .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+
+  /* ─── INPUTS ─── */
+  textarea, input[type="text"], input[type="password"] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: var(--font-mono); font-size: 0.83rem; padding: 12px 16px;
+    outline: none; resize: vertical; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.65;
+  }
+  textarea:focus, input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.08);
+  }
+  textarea::placeholder, input::placeholder { color: var(--muted); }
+
+  .script-type-row { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .script-type-btn {
+    padding: 5px 14px; border-radius: 99px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted2); font-family: var(--font-mono);
+    font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.18s; letter-spacing: 0.5px;
+  }
+  .script-type-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .script-type-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.08); }
+
+  /* ─── OUTPUT BOX ─── */
+  .output-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    min-height: 200px; position: relative; overflow: hidden;
+  }
+  .output-box.empty {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-family: var(--font-main); font-size: 0.88rem;
+    min-height: 200px; padding: 2rem; text-align: center;
+  }
+  .output-box pre {
+    margin: 0 !important; border-radius: var(--radius) !important; background: transparent !important;
+    padding: 1.25rem !important; font-size: 0.8rem !important; line-height: 1.7 !important;
+    white-space: pre-wrap !important; word-break: break-word !important; max-height: 520px; overflow-y: auto;
+  }
+  .output-box pre code.hljs { background: transparent !important; padding: 0 !important; font-family: var(--font-mono) !important; font-size: inherit !important; }
+  .output-plain { padding: 1.25rem; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.75; color: var(--text); white-space: pre-wrap; max-height: 520px; overflow-y: auto; }
+
+  .output-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; }
+  .output-label { font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); color: var(--muted); letter-spacing: 1.2px; text-transform: uppercase; }
+  .output-actions { display: flex; gap: 6px; }
+
+  .action-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted2);
+    font-size: 0.72rem; padding: 4px 10px; border-radius: var(--radius-xs);
+    cursor: pointer; font-family: var(--font-main); font-weight: 700; transition: all 0.2s;
+  }
+  .action-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .action-btn.success { color: var(--green); border-color: var(--green); }
+  .action-btn.studio-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+
+  /* Studio Connection indicator */
+  .studio-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.68rem; font-family: var(--font-mono); color: var(--muted); padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 99px; background: var(--surface);
+  }
+  .studio-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .studio-dot.connected { background: var(--green); animation: pulse-dot 2s infinite; }
+
+  /* ─── STREAMING ─── */
+  .streaming-cursor { display: inline-block; width: 8px; height: 1em; background: var(--accent); margin-left: 2px; vertical-align: text-bottom; animation: blink 0.8s steps(1) infinite; border-radius: 1px; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* ─── LOADING ─── */
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 0.82rem; padding: 1.5rem; }
+  .dot-anim { display: flex; gap: 5px; }
+  .dot-anim span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounce 1.3s infinite; }
+  .dot-anim span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-anim span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; } 40% { transform: scale(1); opacity: 1; } }
+
+  /* ─── CHAT ─── */
+  .chat-area { display: flex; flex-direction: column; gap: 1rem; max-height: 460px; overflow-y: auto; padding-right: 4px; margin-bottom: 1rem; scroll-behavior: smooth; }
+  .chat-area::-webkit-scrollbar { width: 3px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .chat-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+  .msg.ai .msg-avatar { background: rgba(0,229,255,0.12); color: var(--accent); border: 1px solid rgba(0,229,255,0.25); }
+  .msg.user .msg-avatar { background: var(--accent2); color: #fff; }
+  .msg-bubble { max-width: 78%; padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.65; }
+  .msg.ai .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 2px 12px 12px 12px; }
+  .msg.user .msg-bubble { background: var(--accent2); color: #fff; border-radius: 12px 2px 12px 12px; text-align: right; font-family: var(--font-mono); font-size: 0.8rem; }
+  .msg-bubble pre { background: rgba(0,0,0,0.35) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; padding: 10px !important; overflow-x: auto; font-size: 0.75rem !important; margin: 8px 0 !important; white-space: pre-wrap !important; }
+  .msg-bubble pre code.hljs { background: transparent !important; padding: 0 !important; }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row input { flex: 1; resize: none; }
+  .send-btn { background: var(--accent); border: none; color: #000; font-weight: 800; font-family: var(--font-main); font-size: 0.85rem; padding: 0 20px; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; white-space: nowrap; min-width: 70px; }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── CHIPS ─── */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 1rem; }
+  .chip { background: var(--surface2); border: 1px solid var(--border); color: var(--muted2); font-size: 0.75rem; font-family: var(--font-mono); padding: 5px 12px; border-radius: 99px; cursor: pointer; transition: all 0.18s; user-select: none; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.05); }
+  .chip.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.08); }
+
+  /* ─── IDEAS ─── */
+  .ideas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .idea-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; transition: all 0.22s; cursor: default; }
+  .idea-card:hover { border-color: var(--border-hover); }
+  .idea-type { font-size: 0.62rem; font-family: var(--font-mono); font-weight: 700; letter-spacing: 1px; color: var(--accent2); text-transform: uppercase; margin-bottom: 0.4rem; }
+  .idea-title { font-size: 0.93rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .idea-desc { font-size: 0.78rem; color: var(--muted2); line-height: 1.55; margin-bottom: 0.85rem; }
+  .idea-cta { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-family: var(--font-mono); font-weight: 700; color: var(--accent); cursor: pointer; border: 1px solid rgba(0,229,255,0.25); padding: 4px 10px; border-radius: 99px; transition: all 0.18s; background: rgba(0,229,255,0.05); }
+  .idea-cta:hover { background: rgba(0,229,255,0.12); border-color: var(--accent); }
+
+  /* ─── DEBUG ─── */
+  .debug-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 700px) { .debug-cols { grid-template-columns: 1fr; } }
+
+  /* ─── SECTION LABEL ─── */
+  .section-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 0.75rem; }
+
+  /* ─── ERROR ─── */
+  .error-box { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.25); border-radius: var(--radius); padding: 10px 14px; font-size: 0.82rem; color: var(--red); margin-top: 1rem; font-family: var(--font-mono); }
+
+  /* ─── ADMIN PANEL ─── */
+  .admin-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 800px) { .admin-panel-grid { grid-template-columns: 1fr; } }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem;
+  }
+  .stat-card.admin-border { border-color: rgba(245,158,11,0.3); }
+
+  .stat-num { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent); }
+  .stat-num.warn { color: var(--red); }
+  .stat-num.ok { color: var(--green); }
+  .stat-num.gold { color: var(--admin); }
+  .stat-label { font-size: 0.72rem; font-family: var(--font-mono); color: var(--muted2); margin-top: 2px; }
+
+  .admin-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-section-title { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+  .users-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .users-table th { text-align: left; padding: 8px 10px; font-size: 0.65rem; font-family: var(--font-mono); color: var(--muted); letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .users-table td { padding: 10px 10px; border-bottom: 1px solid rgba(37,42,56,0.5); vertical-align: middle; }
+  .users-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.65rem; font-family: var(--font-mono); font-weight: 700;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .status-badge.active { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .status-badge.banned { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .status-badge.admin { background: rgba(245,158,11,0.12); color: var(--admin); border: 1px solid rgba(245,158,11,0.3); }
+
+  .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .admin-search {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-family: var(--font-mono); font-size: 0.8rem; padding: 8px 12px;
+    outline: none; width: 220px; transition: border-color 0.2s;
+  }
+  .admin-search:focus { border-color: var(--accent); }
+
+  .log-entry {
+    display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(37,42,56,0.5);
+    font-size: 0.77rem; font-family: var(--font-mono);
+  }
+  .log-time { color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .log-action { font-weight: 700; flex-shrink: 0; }
+  .log-action.ban { color: var(--red); }
+  .log-action.unban { color: var(--green); }
+  .log-action.kick { color: var(--yellow); }
+  .log-action.ip_ban { color: var(--red); }
+  .log-action.reset_password { color: var(--accent); }
+  .log-action.delete { color: var(--red); }
+  .log-detail { color: var(--muted2); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.75rem; max-width: 420px; width: 100%; margin: 1rem;
+  }
+  .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+  .modal p { font-size: 0.82rem; color: var(--muted2); margin-bottom: 1rem; line-height: 1.6; font-family: var(--font-mono); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+
+  /* ─── MISC ─── */
+  .section-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 0.75rem; }
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+  .kbd-hint { font-size: 0.68rem; color: var(--muted); font-family: var(--font-mono); margin-left: auto; }
+  .kbd { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .empty-state { text-align: center; padding: 3rem; color: var(--muted); font-family: var(--font-mono); font-size: 0.82rem; }
+
+  /* ─── MOBILE ─── */
+  @media (max-width: 640px) {
+    nav { padding: 0.75rem 1rem; }
+    .panel { padding: 1.25rem; }
+    .hero { padding: 2.5rem 1rem 1rem; }
+    .hero h1 { font-size: 2.2rem; }
+    .logo { font-size: 1.15rem; }
+    .nav-tab { padding: 5px 10px; font-size: 0.75rem; }
+    .token-counter { display: none !important; }
+    .admin-panel-grid { grid-template-columns: 1fr; }
+    .users-table { font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ AUTH OVERLAY ═══════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">LUA<span>FORGE</span></div>
+    <div class="auth-subtitle">Roblox Lua AI Platform</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="login-tab" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="register-tab" onclick="switchAuthTab('register')">Create Account</button>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+
+    <div id="login-form">
+      <div class="auth-field">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="your_username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="auth-field">
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="cool_dev_123" autocomplete="username" onkeydown="if(event.key==='Enter')doRegister()" />
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()" />
+      </div>
+      <button class="auth-btn" id="register-btn" onclick="doRegister()">Create Account</button>
+      <div class="auth-rules">Letters, numbers, underscores · 3–24 chars · Password min 6 chars</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav>
+  <div class="logo">LUA<span>FORGE</span></div>
+  <div class="nav-center" id="main-nav">
+    <button class="nav-tab active" onclick="showTab('home')">Home</button>
+    <button class="nav-tab" onclick="showTab('codegen')">Code Gen</button>
+    <button class="nav-tab" onclick="showTab('explain')">Explainer</button>
+    <button class="nav-tab" onclick="showTab('debug')">Debugger</button>
+    <button class="nav-tab" onclick="showTab('ideas')">Ideas</button>
+    <button class="nav-tab" onclick="showTab('chat')">AI Chat</button>
+    <button class="nav-tab admin-tab" id="admin-nav-btn" style="display:none" onclick="showTab('admin')">⚙ Admin</button>
+  </div>
+  <div class="nav-right">
+    <div class="token-counter" id="token-counter">~<span id="token-count">0</span> tokens</div>
+    <div class="studio-status" id="studio-status">
+      <div class="studio-dot" id="studio-dot"></div>
+      <span id="studio-status-text">Studio</span>
+    </div>
+    <div class="user-pill" id="user-pill" style="display:none">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span id="user-display-name">user</span>
+    </div>
+    <div class="badge" id="nav-badge">BETA</div>
+    <button class="btn-logout" id="logout-btn" style="display:none" onclick="doLogout()">Logout</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════ HOME ═══════════════════ -->
+<div id="home" class="panel active">
+  <div class="hero">
+    <div class="hero-eyebrow"><div class="hero-eyebrow-dot"></div> AI POWERED · ROBLOX LUA</div>
+    <h1>Your Roblox Lua<br><span class="hl">AI Dev Partner</span></h1>
+    <p>Generate scripts, understand code, debug errors, get creative ideas and chat with an AI that knows Roblox Lua inside and out. Build faster. Ship smarter.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary" onclick="showTab('codegen')">⚡ Generate Code</button>
+      <button class="btn btn-secondary" onclick="showTab('chat')">🤖 Chat with AI</button>
+    </div>
+  </div>
+  <div class="features">
+    <div class="feature-card" onclick="showTab('codegen')"><span class="feat-icon">⚡</span><div class="feat-title">Code Generator</div><div class="feat-desc">Describe what you want and get clean, working Lua scripts instantly — with syntax highlighting.</div></div>
+    <div class="feature-card" onclick="showTab('explain')"><span class="feat-icon">🔍</span><div class="feat-title">Code Explainer</div><div class="feat-desc">Paste any Lua code and get a detailed breakdown of what every part does.</div></div>
+    <div class="feature-card" onclick="showTab('debug')"><span class="feat-icon">🐛</span><div class="feat-title">Debugger</div><div class="feat-desc">Paste broken code + the error message. AI finds the bug and gives you the fixed script.</div></div>
+    <div class="feature-card" onclick="showTab('ideas')"><span class="feat-icon">💡</span><div class="feat-title">Idea Generator</div><div class="feat-desc">Get unique Roblox game and script ideas, then generate code directly from them.</div></div>
+    <div class="feature-card" onclick="showTab('chat')"><span class="feat-icon">🤖</span><div class="feat-title">AI Assistant</div><div class="feat-desc">Chat freely — ask anything about Roblox development, scripting, or game design.</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ CODE GEN ═══════════════════ -->
+<div id="codegen" class="panel">
+  <div class="tool-container">
+    <div class="tool-header">
+      <span style="font-size:1.5rem">⚡</span>
+      <div class="tool-title">Lua Code Generator</div>
+      <span class="kbd-hint"><span class="kbd">Ctrl</span> + <span class="kbd">↵</span> to generate</span>
+    </div>
+    <div class="section-label">Script type</div>
+    <div class="script-type-row" id="script-type-row">
+      <button class="script-type-btn active" onclick="selectScriptType(this,'Script')">Script (Server)</button>
+      <button class="script-type-btn" onclick="selectScriptType(this,'LocalScript')">LocalScript (Client)</button>
+      <button class="script-type-btn" onclick="selectScriptType(this,'ModuleScript')">ModuleScript</button>
+    </div>
+    <div class="section-label">Quick templates</div>
+    <div class="chip-row">
+      <div class="chip" onclick="setPrompt('codegen-input','A leaderboard that tracks player kills and deaths')">Leaderboard</div>
+      <div class="chip" onclick="setPrompt('codegen-input','A double jump ability for players')">Double Jump</div>
+      <div class="chip" onclick="setPrompt('codegen-input','A shop GUI that lets players buy items with in-game currency')">Shop GUI</div>
+      <div class="chip" onclick="setPrompt('codegen-input','A proximity prompt door that opens and closes')">Door System</div>
+      <div class="chip" onclick="setPrompt('codegen-input','An admin command system with kick and ban')">Admin Commands</div>
+      <div class="chip" onclick="setPrompt('codegen-input','A datastore to save and load player data')">DataStore Save</div>
+    </div>
+    <div class="section-label">Describe your script</div>
+    <textarea id="codegen-input" rows="4" placeholder="e.g. A speed boost powerup that lasts 10 seconds and shows a timer on screen..." onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();generateCode();}"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="generateCode()">Generate Script</button>
+      <button class="btn btn-secondary" onclick="clearTool('codegen')">Clear</button>
+    </div>
+    <div class="output-header">
+      <div class="output-label">Output — Lua Script</div>
+      <div class="output-actions">
+        <button class="action-btn" id="copy-codegen" onclick="copyCode('codegen-code','copy-codegen')">Copy</button>
+        <button class="action-btn" onclick="downloadLua('codegen-code')">Download .lua</button>
+        <button class="action-btn studio-btn" id="push-codegen" onclick="pushToStudio('codegen-code')">→ Studio</button>
+      </div>
+    </div>
+    <div id="codegen-output" class="output-box empty" data-placeholder="Your generated Lua script will appear here...">Your generated Lua script will appear here...</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ EXPLAINER ═══════════════════ -->
+<div id="explain" class="panel">
+  <div class="tool-container">
+    <div class="tool-header"><span style="font-size:1.5rem">🔍</span><div class="tool-title">Code Explainer</div><span class="kbd-hint"><span class="kbd">Ctrl</span> + <span class="kbd">↵</span> to explain</span></div>
+    <div class="section-label">Paste your Lua code</div>
+    <textarea id="explain-input" rows="9" placeholder="Paste any Roblox Lua code here..." onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();explainCode();}"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="explainCode()">Explain Code</button>
+      <button class="btn btn-secondary" onclick="clearTool('explain')">Clear</button>
+    </div>
+    <div class="output-header">
+      <div class="output-label">Explanation</div>
+      <div class="output-actions"><button class="action-btn" id="copy-explain" onclick="copyCode('explain-text','copy-explain')">Copy</button></div>
+    </div>
+    <div id="explain-output" class="output-box empty" data-placeholder="Paste code above and click Explain.">Paste code above and click Explain.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ DEBUGGER ═══════════════════ -->
+<div id="debug" class="panel">
+  <div class="tool-container">
+    <div class="tool-header"><span style="font-size:1.5rem">🐛</span><div class="tool-title">Lua Debugger</div><span class="kbd-hint"><span class="kbd">Ctrl</span> + <span class="kbd">↵</span> to debug</span></div>
+    <div class="debug-cols">
+      <div>
+        <div class="section-label">Broken Lua code</div>
+        <textarea id="debug-code" rows="10" placeholder="Paste your broken script here..." onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();debugCode();}"></textarea>
+      </div>
+      <div>
+        <div class="section-label">Error message (optional)</div>
+        <textarea id="debug-error" rows="10" placeholder="Paste the Roblox Studio error message here..." onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();debugCode();}"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="debugCode()">Find & Fix Bug</button>
+      <button class="btn btn-secondary" onclick="clearTool('debug')">Clear</button>
+    </div>
+    <div class="output-header">
+      <div class="output-label">Fixed Script + Explanation</div>
+      <div class="output-actions">
+        <button class="action-btn" id="copy-debug" onclick="copyCode('debug-code-out','copy-debug')">Copy</button>
+        <button class="action-btn" onclick="downloadLua('debug-code-out')">Download .lua</button>
+        <button class="action-btn studio-btn" onclick="pushToStudio('debug-code-out')">→ Studio</button>
+      </div>
+    </div>
+    <div id="debug-output" class="output-box empty" data-placeholder="Paste your broken code above. AI will identify the bug and fix it.">Paste your broken code above. AI will identify the bug and fix it.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ IDEAS ═══════════════════ -->
+<div id="ideas" class="panel">
+  <div class="tool-container">
+    <div class="tool-header"><span style="font-size:1.5rem">💡</span><div class="tool-title">Idea Generator</div></div>
+    <div class="section-label">What kind of ideas?</div>
+    <div class="chip-row" id="idea-type-chips">
+      <div class="chip active" onclick="selectIdeaType('game',this)">Game concept</div>
+      <div class="chip" onclick="selectIdeaType('script',this)">Script feature</div>
+      <div class="chip" onclick="selectIdeaType('mechanic',this)">Game mechanic</div>
+      <div class="chip" onclick="selectIdeaType('system',this)">Game system</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <input type="text" id="ideas-input" placeholder="Optional: any theme or genre? (e.g. horror, space, RPG)" />
+      <button class="btn btn-primary" onclick="generateIdeas()" style="white-space:nowrap;flex-shrink:0">Get Ideas</button>
+    </div>
+    <div id="ideas-output" class="ideas-grid" style="display:none"></div>
+    <div id="ideas-loading" style="display:none"><div class="loading"><div class="dot-anim"><span></span><span></span><span></span></div> Generating ideas...</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ CHAT ═══════════════════ -->
+<div id="chat" class="panel">
+  <div class="tool-container">
+    <div class="chat-top-bar">
+      <div class="tool-header" style="margin-bottom:0"><span style="font-size:1.5rem">🤖</span><div class="tool-title">AI Roblox Assistant</div></div>
+      <button class="btn btn-ghost" onclick="clearChat()" style="font-size:0.78rem;padding:6px 14px">Clear chat</button>
+    </div>
+    <div class="chat-area" id="chat-messages">
+      <div class="msg ai">
+        <div class="msg-avatar">AI</div>
+        <div class="msg-bubble">Hey! I'm your Roblox Lua AI. Ask me anything — how to script a gun system, how datastores work, how to make a GUI, debug your code, or just brainstorm game ideas. I'm here to help!</div>
+      </div>
+    </div>
+    <div class="section-label">Quick questions</div>
+    <div class="chip-row" style="margin-bottom:1rem">
+      <div class="chip" onclick="sendQuick('How do RemoteEvents work in Roblox?')">RemoteEvents?</div>
+      <div class="chip" onclick="sendQuick('What is the best way to save player data?')">Save data</div>
+      <div class="chip" onclick="sendQuick('How do I make a part follow a player?')">Follow player</div>
+      <div class="chip" onclick="sendQuick('Explain how TweenService works')">TweenService</div>
+      <div class="chip" onclick="sendQuick('What is the difference between Script and LocalScript?')">Script vs LocalScript</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Ask anything about Roblox scripting..." onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="send-btn" id="chat-send-btn" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADMIN PANEL ═══════════════════ -->
+<div id="admin" class="panel">
+  <div class="tool-container" style="max-width:1100px">
+    <div class="tool-header">
+      <span style="font-size:1.5rem">⚙️</span>
+      <div class="tool-title">Admin Panel</div>
+      <span class="badge-admin" style="margin-left:8px">ADMIN</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="admin-panel-grid" id="admin-stats-grid">
+      <div class="stat-card admin-border"><div class="stat-num" id="stat-users">—</div><div class="stat-label">Total Users</div></div>
+      <div class="stat-card admin-border"><div class="stat-num warn" id="stat-banned">—</div><div class="stat-label">Banned Accounts</div></div>
+      <div class="stat-card admin-border"><div class="stat-num ok" id="stat-scripts">—</div><div class="stat-label">Scripts Generated</div></div>
+      <div class="stat-card admin-border"><div class="stat-num gold" id="stat-connections">—</div><div class="stat-label">Live WS Connections</div></div>
+    </div>
+
+    <!-- Users Table -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem">
+      <div class="admin-section-header">
+        <div class="admin-section-title">👥 Users</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="admin-search" type="text" id="user-search" placeholder="Search username..." oninput="filterUsers()" />
+          <button class="btn btn-secondary btn-sm" onclick="loadAdminData()">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="users-table" id="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Last Seen</th>
+              <th>Scripts</th>
+              <th>Msgs</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ban Logs -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem">
+      <div class="admin-section-header">
+        <div class="admin-section-title">📋 Action Log</div>
+      </div>
+      <div id="ban-log-list">
+        <div class="empty-state">Loading logs...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL ═══════════════════ -->
+<div class="modal-backdrop" id="modal-backdrop" style="display:none" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-body"></p>
+    <div id="modal-input-area"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" id="modal-confirm-btn" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONFIG — point this at your Railway server URL
+// ═══════════════════════════════════════════════
+const SERVER_URL = 'https://YOUR-APP.up.railway.app'; // ← CHANGE THIS
+const WS_URL = SERVER_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+
+const SYSTEM_ROBLOX = `You are LuaForge AI, an expert Roblox Lua scripting assistant. You know everything about Roblox Studio, LocalScripts, Scripts, ModuleScripts, and all Roblox services (TweenService, DataStoreService, RemoteEvents, RemoteFunctions, etc.). Always write clean, well-commented, working Roblox Lua code. Format ALL code in \`\`\`lua code blocks. Be concise and practical.`;
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let currentUser = null;
+let authToken = null;
+let selectedIdeaType = 'game';
+let selectedScriptType = 'Script';
+let chatHistory = [];
+let totalTokensUsed = 0;
+let studioWs = null;
+let studioConnected = false;
+let allUsersData = [];
+let modalCallback = null;
+
+// ═══════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════
+function saveAuth(token, user) {
+  localStorage.setItem('lf_token', token);
+  localStorage.setItem('lf_user', JSON.stringify(user));
+}
+function loadAuth() {
+  const token = localStorage.getItem('lf_token');
+  const user = localStorage.getItem('lf_user');
+  if (token && user) {
+    try { return { token, user: JSON.parse(user) }; } catch {}
+  }
+  return null;
+}
+function clearAuth() {
+  localStorage.removeItem('lf_token');
+  localStorage.removeItem('lf_user');
+}
+
+// ═══════════════════════════════════════════════
+//  AUTH UI
+// ═══════════════════════════════════════════════
+function switchAuthTab(tab) {
+  document.getElementById('login-tab').classList.toggle('active', tab === 'login');
+  document.getElementById('register-tab').classList.toggle('active', tab === 'register');
+  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+  showAuthError('');
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.toggle('visible', !!msg);
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!username || !password) return showAuthError('Fill in all fields');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const res = await apiPost('/api/auth/login', { username, password }, false);
+    saveAuth(res.token, res.user);
+    onLoginSuccess(res.token, res.user);
+  } catch (e) {
+    showAuthError(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  if (!username || !password) return showAuthError('Fill in all fields');
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  try {
+    const res = await apiPost('/api/auth/register', { username, password }, false);
+    saveAuth(res.token, res.user);
+    onLoginSuccess(res.token, res.user);
+  } catch (e) {
+    showAuthError(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
+function onLoginSuccess(token, user) {
+  authToken = token;
+  currentUser = user;
+
+  document.getElementById('auth-overlay').style.display = 'none';
+
+  // Update nav
+  const pill = document.getElementById('user-pill');
+  const av = document.getElementById('user-avatar');
+  pill.style.display = 'flex';
+  document.getElementById('user-display-name').textContent = user.username;
+  av.textContent = user.username[0].toUpperCase();
+  if (user.isAdmin) {
+    av.classList.add('admin-av');
+    document.getElementById('admin-nav-btn').style.display = '';
+    document.getElementById('nav-badge').className = 'badge-admin';
+    document.getElementById('nav-badge').textContent = 'ADMIN';
+  }
+  document.getElementById('logout-btn').style.display = '';
+
+  loadChatHistory();
+  connectStudio();
+}
+
+async function doLogout() {
+  try { await apiPost('/api/auth/logout', {}, true); } catch {}
+  clearAuth();
+  disconnectStudio();
+  authToken = null;
+  currentUser = null;
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('user-pill').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+  document.getElementById('admin-nav-btn').style.display = 'none';
+  document.getElementById('nav-badge').className = 'badge';
+  document.getElementById('nav-badge').textContent = 'BETA';
+  showTab('home');
+}
+
+// ─── Auto-login from stored token ───
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = loadAuth();
+  if (saved) {
+    authToken = saved.token;
+    try {
+      const user = await apiGet('/api/auth/me');
+      currentUser = user;
+      saveAuth(saved.token, user);
+      onLoginSuccess(saved.token, user);
+    } catch {
+      clearAuth();
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════
+//  API HELPERS
+// ═══════════════════════════════════════════════
+async function apiPost(path, body, auth = true) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(SERVER_URL + path, { method: 'POST', headers, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 401 && auth) { handleSessionExpired(); }
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+async function apiGet(path) {
+  const headers = {};
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(SERVER_URL + path, { headers });
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 401) handleSessionExpired();
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+async function apiDelete(path, body) {
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+  const res = await fetch(SERVER_URL + path, { method: 'DELETE', headers, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function handleSessionExpired() {
+  clearAuth();
+  authToken = null;
+  currentUser = null;
+  disconnectStudio();
+  document.getElementById('auth-overlay').style.display = 'flex';
+  showAuthError('Your session expired. Please sign in again.');
+}
+
+// ═══════════════════════════════════════════════
+//  CLAUDE API (proxied through Railway)
+// ═══════════════════════════════════════════════
+async function callClaude(messages, system, onStream, type, prompt) {
+  const useStream = typeof onStream === 'function';
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1500,
+    system: system || SYSTEM_ROBLOX,
+    messages,
+    stream: useStream,
+    type: type || 'codegen',
+    prompt: prompt || '',
+  };
+
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+
+  const res = await fetch(SERVER_URL + '/api/claude', { method: 'POST', headers, body: JSON.stringify(body) });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (res.status === 401) handleSessionExpired();
+    throw new Error(err?.error || `HTTP ${res.status}`);
+  }
+
+  if (!useStream) {
+    const data = await res.json();
+    updateTokenCount(data.usage);
+    return data.content?.[0]?.text || '';
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  let inputTokens = 0, outputTokens = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      const json = line.slice(5).trim();
+      if (json === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(json);
+        if (evt.type === 'content_block_delta' && evt.delta?.text) { full += evt.delta.text; onStream(full); }
+        if (evt.type === 'message_delta' && evt.usage) outputTokens = evt.usage.output_tokens || 0;
+        if (evt.type === 'message_start' && evt.message?.usage) inputTokens = evt.message.usage.input_tokens || 0;
+      } catch {}
+    }
+  }
+  updateTokenCount({ input_tokens: inputTokens, output_tokens: outputTokens });
+  return full;
+}
+
+// ═══════════════════════════════════════════════
+//  WEBSOCKET (Studio Bridge)
+// ═══════════════════════════════════════════════
+function connectStudio() {
+  if (!authToken) return;
+  try {
+    studioWs = new WebSocket(`${WS_URL}?token=${encodeURIComponent(authToken)}`);
+    studioWs.onopen = () => {};
+    studioWs.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'connected') { setStudioStatus(true); }
+        if (msg.type === 'kicked') { setStudioStatus(false); handleSessionExpired(); }
+        if (msg.type === 'pong') {}
+      } catch {}
+    };
+    studioWs.onclose = () => setStudioStatus(false);
+    studioWs.onerror = () => setStudioStatus(false);
+  } catch {}
+}
+
+function disconnectStudio() {
+  if (studioWs) { try { studioWs.close(); } catch {} studioWs = null; }
+  setStudioStatus(false);
+}
+
+function setStudioStatus(connected) {
+  studioConnected = connected;
+  const dot = document.getElementById('studio-dot');
+  const text = document.getElementById('studio-status-text');
+  dot.classList.toggle('connected', connected);
+  text.textContent = connected ? 'Studio ✓' : 'Studio';
+}
+
+async function pushToStudio(codeElId) {
+  const el = document.getElementById(codeElId);
+  if (!el) return;
+  const code = el.innerText || el.textContent;
+  if (!code.trim()) return;
+  try {
+    await apiPost('/api/push-to-studio', { code, scriptName: 'LuaForgeScript' });
+    alert('✅ Script pushed to Roblox Studio!');
+  } catch (e) {
+    alert('⚠ Studio not connected: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+const ALL_TABS = ['home', 'codegen', 'explain', 'debug', 'ideas', 'chat', 'admin'];
+function showTab(tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  const tabs = ['home', 'codegen', 'explain', 'debug', 'ideas', 'chat'];
+  const idx = tabs.indexOf(tab);
+  if (idx >= 0) document.querySelectorAll('.nav-tab')[idx].classList.add('active');
+  if (tab === 'admin') {
+    document.getElementById('admin-nav-btn').classList.add('active');
+    loadAdminData();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SCRIPT TYPE / IDEA TYPE
+// ═══════════════════════════════════════════════
+function selectScriptType(el, type) {
+  selectedScriptType = type;
+  document.querySelectorAll('.script-type-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function selectIdeaType(type, el) {
+  selectedIdeaType = type;
+  document.querySelectorAll('#idea-type-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+function setPrompt(id, val) { document.getElementById(id).value = val; document.getElementById(id).focus(); }
+
+function clearTool(tool) {
+  if (tool === 'codegen') {
+    document.getElementById('codegen-input').value = '';
+    const out = document.getElementById('codegen-output'); out.className = 'output-box empty'; out.innerHTML = out.dataset.placeholder;
+  } else if (tool === 'explain') {
+    document.getElementById('explain-input').value = '';
+    const out = document.getElementById('explain-output'); out.className = 'output-box empty'; out.innerHTML = out.dataset.placeholder;
+  } else if (tool === 'debug') {
+    document.getElementById('debug-code').value = ''; document.getElementById('debug-error').value = '';
+    const out = document.getElementById('debug-output'); out.className = 'output-box empty'; out.innerHTML = out.dataset.placeholder;
+  }
+}
+
+function copyCode(elId, btnId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.innerText || el.textContent).catch(() => {});
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.textContent = 'Copied!'; btn.classList.add('success');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('success'); }, 1800);
+}
+
+function downloadLua(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const blob = new Blob([el.innerText || el.textContent], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'luaforge_script.lua'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function updateTokenCount(usage) {
+  if (!usage) return;
+  const tokens = (usage.input_tokens || 0) + (usage.output_tokens || 0);
+  totalTokensUsed += tokens;
+  document.getElementById('token-count').textContent = totalTokensUsed.toLocaleString();
+  document.getElementById('token-counter').classList.add('visible');
+}
+
+function highlightLua(code) { try { return hljs.highlight(code, { language: 'lua' }).value; } catch { return escapeHtml(code); } }
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(str) { return str.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function renderCodeOutput(containerId, codeId, rawText) {
+  const container = document.getElementById(containerId); container.className = 'output-box';
+  const codeMatch = rawText.match(/```(?:lua)?\n?([\s\S]*?)```/);
+  const code = codeMatch ? codeMatch[1].trim() : rawText.trim();
+  container.innerHTML = `<pre><code class="hljs language-lua" id="${codeId}">${highlightLua(code)}</code></pre>`;
+}
+
+function renderPlainOutput(containerId, textId, rawText) {
+  const container = document.getElementById(containerId); container.className = 'output-box';
+  container.innerHTML = `<div class="output-plain" id="${textId}">${formatPlain(rawText)}</div>`;
+}
+
+function renderDebugOutput(containerId, codeId, rawText) {
+  const container = document.getElementById(containerId); container.className = 'output-box';
+  const codeMatches = [...rawText.matchAll(/```(?:lua)?\n?([\s\S]*?)```/g)];
+  const lastCode = codeMatches.length ? codeMatches[codeMatches.length-1][1].trim() : null;
+  const textOnly = rawText.replace(/```(?:lua)?\n?[\s\S]*?```/g, '').trim();
+  let html = `<div class="output-plain">${formatPlain(textOnly)}</div>`;
+  if (lastCode) html += `<div style="border-top:1px solid var(--border);padding:1rem"><div class="section-label" style="margin-bottom:0.5rem">Fixed Script</div><pre><code class="hljs language-lua" id="${codeId}">${highlightLua(lastCode)}</code></pre></div>`;
+  else html += `<span id="${codeId}" style="display:none"></span>`;
+  container.innerHTML = html;
+}
+
+function formatPlain(text) {
+  return text
+    .replace(/```lua([\s\S]*?)```/g, (_, c) => `<pre><code class="hljs language-lua">${highlightLua(c.trim())}</code></pre>`)
+    .replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${escapeHtml(c.trim())}</code></pre>`)
+    .replace(/`([^`]+)`/g, `<code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);font-size:0.83em">$1</code>`)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function setLoading(containerId, msg) {
+  const c = document.getElementById(containerId); c.className = 'output-box';
+  c.innerHTML = `<div class="loading"><div class="dot-anim"><span></span><span></span><span></span></div>${msg}</div>`;
+}
+
+function setError(containerId, msg) {
+  const c = document.getElementById(containerId); c.className = 'output-box';
+  c.innerHTML = `<div class="error-box">${msg}</div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  CODE GEN
+// ═══════════════════════════════════════════════
+async function generateCode() {
+  const input = document.getElementById('codegen-input').value.trim();
+  if (!input) return;
+  setLoading('codegen-output', 'Generating Lua script...');
+  try {
+    const prompt = `Write a complete, working Roblox ${selectedScriptType} for: ${input}\n\nProvide the full script with comments explaining key parts. Specify where to place this script in Roblox Studio.`;
+    let raw = '';
+    await callClaude([{ role: 'user', content: prompt }], null, (partial) => {
+      raw = partial;
+      const container = document.getElementById('codegen-output'); container.className = 'output-box';
+      const codeMatch = partial.match(/```(?:lua)?\n?([\s\S]*?)```/);
+      if (codeMatch) container.innerHTML = `<pre><code class="hljs language-lua" id="codegen-code">${highlightLua(codeMatch[1].trim())}</code></pre>`;
+      else { const plain = partial.replace(/```(?:lua)?/g,''); container.innerHTML = `<pre><code class="hljs language-lua" id="codegen-code">${highlightLua(plain.trim())}</code></pre><span class="streaming-cursor"></span>`; }
+    }, 'codegen', input);
+    renderCodeOutput('codegen-output', 'codegen-code', raw);
+  } catch(e) { setError('codegen-output', '⚠ Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════
+//  EXPLAINER
+// ═══════════════════════════════════════════════
+async function explainCode() {
+  const input = document.getElementById('explain-input').value.trim();
+  if (!input) return;
+  setLoading('explain-output', 'Analyzing your code...');
+  try {
+    let raw = '';
+    await callClaude([{ role: 'user', content: `Explain this Roblox Lua code in detail:\n\n\`\`\`lua\n${input}\n\`\`\`` }], null, (partial) => {
+      raw = partial;
+      const container = document.getElementById('explain-output'); container.className = 'output-box';
+      container.innerHTML = `<div class="output-plain" id="explain-text">${formatPlain(partial)}<span class="streaming-cursor"></span></div>`;
+    }, 'explain', input);
+    renderPlainOutput('explain-output', 'explain-text', raw);
+  } catch(e) { setError('explain-output', '⚠ Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════
+//  DEBUGGER
+// ═══════════════════════════════════════════════
+async function debugCode() {
+  const code = document.getElementById('debug-code').value.trim();
+  const errorMsg = document.getElementById('debug-error').value.trim();
+  if (!code) return;
+  setLoading('debug-output', 'Hunting for bugs...');
+  const prompt = `Debug this Roblox Lua code${errorMsg ? ` which produces this error: "${errorMsg}"` : ''}.\n\n\`\`\`lua\n${code}\n\`\`\`\n\nProvide: 1) A clear explanation of what the bug is and why it happens, 2) The complete fixed script in a lua code block.`;
+  try {
+    let raw = '';
+    await callClaude([{ role: 'user', content: prompt }], null, (partial) => {
+      raw = partial;
+      const container = document.getElementById('debug-output'); container.className = 'output-box';
+      container.innerHTML = `<div class="output-plain">${formatPlain(partial)}<span class="streaming-cursor"></span></div>`;
+    }, 'debug', code.slice(0, 200));
+    renderDebugOutput('debug-output', 'debug-code-out', raw);
+  } catch(e) { setError('debug-output', '⚠ Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════
+//  IDEAS
+// ═══════════════════════════════════════════════
+async function generateIdeas() {
+  const theme = document.getElementById('ideas-input').value.trim();
+  const grid = document.getElementById('ideas-output'); const loading = document.getElementById('ideas-loading');
+  grid.style.display = 'none'; loading.style.display = 'block';
+  const typeLabels = { game: 'Roblox game concept', script: 'Roblox script feature', mechanic: 'game mechanic', system: 'game system' };
+  try {
+    const text = await callClaude([{ role: 'user', content: `Generate 6 creative ${typeLabels[selectedIdeaType]} ideas for Roblox${theme ? ' with a ' + theme + ' theme' : ''}. Return ONLY a JSON array, no markdown, no backticks: [{"title":"...","type":"...","description":"..."},...]` }], SYSTEM_ROBLOX + ' When asked for JSON, return only raw JSON with no markdown or backticks.', null, 'ideas', theme);
+    let ideas;
+    try { ideas = JSON.parse(text.replace(/```json?|```/g,'').trim()); }
+    catch { const m = text.match(/\[[\s\S]*\]/); ideas = m ? JSON.parse(m[0]) : []; }
+    loading.style.display = 'none'; grid.style.display = 'grid';
+    grid.innerHTML = ideas.map(i => `<div class="idea-card"><div class="idea-type">${escapeHtml(i.type||selectedIdeaType)}</div><div class="idea-title">${escapeHtml(i.title)}</div><div class="idea-desc">${escapeHtml(i.description)}</div><div class="idea-cta" onclick="ideaToCodeGen('${escapeAttr(i.title)}','${escapeAttr(i.description)}')">⚡ Generate script →</div></div>`).join('');
+  } catch(e) {
+    loading.style.display = 'none'; grid.style.display = 'grid';
+    grid.innerHTML = `<div class="error-box" style="grid-column:1/-1">Error generating ideas. Try again.</div>`;
+  }
+}
+
+function ideaToCodeGen(title, desc) {
+  document.getElementById('codegen-input').value = `${title}: ${desc}`;
+  showTab('codegen'); generateCode();
+}
+
+// ═══════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════
+const CHAT_STORAGE_KEY = 'luaforge_chat_history';
+
+function loadChatHistory() {
+  try {
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      chatHistory = JSON.parse(saved);
+      chatHistory.forEach(msg => { if (msg.role !== 'user' && msg.role !== 'assistant') return; appendMsg(msg.role === 'user' ? 'user' : 'ai', msg.content); });
+    }
+  } catch {}
+}
+
+function saveChatHistory() { try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatHistory.slice(-40))); } catch {} }
+
+function clearChat() {
+  chatHistory = [];
+  try { localStorage.removeItem(CHAT_STORAGE_KEY); } catch {}
+  document.getElementById('chat-messages').innerHTML = `<div class="msg ai"><div class="msg-avatar">AI</div><div class="msg-bubble">Hey! I'm your Roblox Lua AI. Ask me anything — how to script a gun system, how datastores work, how to make a GUI, debug your code, or just brainstorm game ideas. I'm here to help!</div></div>`;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input'); const msg = input.value.trim();
+  if (!msg) return; input.value = '';
+  const btn = document.getElementById('chat-send-btn'); btn.disabled = true;
+  appendMsg('user', msg); chatHistory.push({ role: 'user', content: msg });
+  const bubbleId = appendStreamBubble(); let raw = '';
+  try {
+    await callClaude(chatHistory, SYSTEM_ROBLOX, (partial) => {
+      raw = partial;
+      const bubble = document.getElementById(bubbleId);
+      if (bubble) { bubble.innerHTML = formatMsg(partial) + '<span class="streaming-cursor"></span>'; scrollChat(); }
+    }, 'chat', msg);
+    const bubble = document.getElementById(bubbleId);
+    if (bubble) bubble.innerHTML = formatMsg(raw);
+    chatHistory.push({ role: 'assistant', content: raw }); saveChatHistory();
+  } catch(e) {
+    const bubble = document.getElementById(bubbleId);
+    if (bubble) bubble.textContent = '⚠ Error — could not reach AI. Check your connection.';
+  }
+  btn.disabled = false; scrollChat();
+}
+
+function sendQuick(msg) { document.getElementById('chat-input').value = msg; sendChat(); }
+
+let msgIdCounter = 0;
+function appendMsg(role, content) {
+  const area = document.getElementById('chat-messages'); const isAI = role === 'ai' || role === 'assistant';
+  const div = document.createElement('div'); div.className = 'msg ' + (isAI ? 'ai' : 'user');
+  div.innerHTML = `<div class="msg-avatar">${isAI ? 'AI' : (currentUser?.username?.[0]?.toUpperCase() || 'U')}</div><div class="msg-bubble">${isAI ? formatMsg(content) : escapeHtml(content)}</div>`;
+  area.appendChild(div); scrollChat();
+}
+
+function appendStreamBubble() {
+  const id = 'msg-' + (++msgIdCounter); const area = document.getElementById('chat-messages');
+  const div = document.createElement('div'); div.className = 'msg ai';
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble" id="${id}"><div class="dot-anim"><span></span><span></span><span></span></div></div>`;
+  area.appendChild(div); scrollChat(); return id;
+}
+
+function formatMsg(text) {
+  return text
+    .replace(/```lua([\s\S]*?)```/g, (_, c) => `<pre><code class="hljs language-lua">${highlightLua(c.trim())}</code></pre>`)
+    .replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${escapeHtml(c.trim())}</code></pre>`)
+    .replace(/`([^`]+)`/g, `<code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);font-size:0.83em">$1</code>`)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function scrollChat() { const a = document.getElementById('chat-messages'); a.scrollTop = a.scrollHeight; }
+
+// ═══════════════════════════════════════════════
+//  ADMIN PANEL
+// ═══════════════════════════════════════════════
+async function loadAdminData() {
+  try {
+    const [stats, users, logs] = await Promise.all([
+      apiGet('/api/admin/stats'),
+      apiGet('/api/admin/users'),
+      apiGet('/api/admin/logs'),
+    ]);
+
+    document.getElementById('stat-users').textContent = stats.totalUsers;
+    document.getElementById('stat-banned').textContent = stats.totalBanned;
+    document.getElementById('stat-scripts').textContent = stats.totalScripts;
+    document.getElementById('stat-connections').textContent = stats.activeConnections;
+
+    allUsersData = users;
+    renderUsersTable(users);
+    renderLogs(logs);
+  } catch(e) {
+    console.error('Admin data load failed:', e.message);
+  }
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  renderUsersTable(allUsersData.filter(u => u.username.includes(q)));
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No users found</td></tr>'; return; }
+  tbody.innerHTML = users.map(u => {
+    const isAdmin = u.isAdmin;
+    const isBanned = u.isBanned;
+    let statusBadge = isBanned
+      ? `<span class="status-badge banned">● Banned</span>`
+      : isAdmin
+        ? `<span class="status-badge admin">★ Admin</span>`
+        : `<span class="status-badge active">● Active</span>`;
+
+    const actions = isAdmin ? `<span style="color:var(--muted);font-size:0.72rem;font-family:var(--font-mono)">admin</span>` : `
+      <div class="action-row">
+        ${isBanned
+          ? `<button class="btn btn-sm btn-secondary" onclick="adminAction('unban','${u.username}')">Unban</button>`
+          : `<button class="btn btn-sm btn-danger" onclick="adminAction('ban','${u.username}')">Ban</button>`
+        }
+        <button class="btn btn-sm btn-warn" onclick="adminAction('kick','${u.username}')">Kick</button>
+        <button class="btn btn-sm btn-secondary" onclick="adminAction('ip-ban','${u.username}')">IP Ban</button>
+        <button class="btn btn-sm btn-secondary" onclick="adminAction('reset-pw','${u.username}')">Reset PW</button>
+        <button class="btn btn-sm btn-danger" onclick="adminAction('delete','${u.username}')">Delete</button>
+      </div>`;
+
+    return `<tr>
+      <td><strong>${escapeHtml(u.username)}</strong></td>
+      <td>${statusBadge}</td>
+      <td style="color:var(--muted2);font-family:var(--font-mono);font-size:0.72rem">${fmtDate(u.createdAt)}</td>
+      <td style="color:var(--muted2);font-family:var(--font-mono);font-size:0.72rem">${fmtDate(u.lastSeen)}</td>
+      <td style="font-family:var(--font-mono)">${u.scriptsGenerated || 0}</td>
+      <td style="font-family:var(--font-mono)">${u.messagesCount || 0}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLogs(logs) {
+  const el = document.getElementById('ban-log-list');
+  if (!logs.length) { el.innerHTML = '<div class="empty-state">No admin actions yet</div>'; return; }
+  el.innerHTML = logs.map(l => `
+    <div class="log-entry">
+      <span class="log-time">${fmtDate(l.createdAt)}</span>
+      <span class="log-action ${l.action}">${l.action.toUpperCase()}</span>
+      <span class="log-detail">${escapeHtml(l.targetUsername)} · by ${escapeHtml(l.adminUsername)}${l.reason ? ' · "' + escapeHtml(l.reason) + '"' : ''}${l.ip ? ' · IP: ' + escapeHtml(l.ip) : ''}</span>
+    </div>
+  `).join('');
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Admin action dispatch ───
+let pendingAction = null;
+
+function adminAction(action, username) {
+  pendingAction = { action, username };
+  const modal = document.getElementById('modal-backdrop');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const inputArea = document.getElementById('modal-input-area');
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+
+  inputArea.innerHTML = '';
+
+  if (action === 'ban') {
+    title.textContent = `Ban @${username}`;
+    body.textContent = 'This will prevent the user from logging in. They will be kicked immediately.';
+    inputArea.innerHTML = `<input type="text" id="modal-reason" placeholder="Reason for ban (optional)" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.82rem;padding:10px 12px;outline:none;width:100%;margin-bottom:8px" />`;
+    confirmBtn.className = 'btn btn-sm btn-danger'; confirmBtn.textContent = 'Ban User';
+  } else if (action === 'unban') {
+    title.textContent = `Unban @${username}`;
+    body.textContent = 'The user will be able to log back in.';
+    confirmBtn.className = 'btn btn-sm btn-secondary'; confirmBtn.textContent = 'Unban';
+  } else if (action === 'kick') {
+    title.textContent = `Kick @${username}`;
+    body.textContent = 'This will force-logout the user. They can log back in immediately.';
+    confirmBtn.className = 'btn btn-sm btn-warn'; confirmBtn.textContent = 'Kick';
+  } else if (action === 'ip-ban') {
+    title.textContent = `IP Ban @${username}`;
+    body.textContent = 'Enter the IP address to ban for this user.';
+    inputArea.innerHTML = `<input type="text" id="modal-ip" placeholder="e.g. 123.45.67.89" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.82rem;padding:10px 12px;outline:none;width:100%;margin-bottom:8px" />`;
+    confirmBtn.className = 'btn btn-sm btn-danger'; confirmBtn.textContent = 'IP Ban';
+  } else if (action === 'reset-pw') {
+    title.textContent = `Reset Password — @${username}`;
+    body.textContent = 'Set a new temporary password for this user. They will be logged out.';
+    inputArea.innerHTML = `<input type="text" id="modal-newpw" placeholder="New password (min 6 chars)" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.82rem;padding:10px 12px;outline:none;width:100%;margin-bottom:8px" />`;
+    confirmBtn.className = 'btn btn-sm btn-primary'; confirmBtn.textContent = 'Reset Password';
+  } else if (action === 'delete') {
+    title.textContent = `Delete @${username}`;
+    body.textContent = '⚠ This permanently deletes the account and all their script history. Cannot be undone.';
+    confirmBtn.className = 'btn btn-sm btn-danger'; confirmBtn.textContent = 'Delete Permanently';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-backdrop')) return;
+  document.getElementById('modal-backdrop').style.display = 'none';
+  pendingAction = null;
+}
+
+async function confirmModal() {
+  if (!pendingAction) return;
+  const { action, username } = pendingAction;
+  document.getElementById('modal-backdrop').style.display = 'none';
+
+  try {
+    if (action === 'ban') {
+      const reason = document.getElementById('modal-reason')?.value || '';
+      await apiPost('/api/admin/ban', { username, reason });
+    } else if (action === 'unban') {
+      await apiPost('/api/admin/unban', { username });
+    } else if (action === 'kick') {
+      await apiPost('/api/admin/kick', { username });
+    } else if (action === 'ip-ban') {
+      const ip = document.getElementById('modal-ip')?.value?.trim();
+      if (!ip) return alert('Enter an IP address');
+      await apiPost('/api/admin/ip-ban', { username, ip });
+    } else if (action === 'reset-pw') {
+      const newPassword = document.getElementById('modal-newpw')?.value?.trim();
+      if (!newPassword) return alert('Enter a new password');
+      await apiPost('/api/admin/reset-password', { username, newPassword });
+    } else if (action === 'delete') {
+      await apiDelete('/api/admin/delete-user', { username });
+    }
+    loadAdminData();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+  pendingAction = null;
+}
+</script>
+</body>
+</html>
