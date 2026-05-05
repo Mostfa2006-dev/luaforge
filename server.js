@@ -98,14 +98,10 @@ async function authMiddleware(req, res, next) {
   }
   try {
     const token = authHeader.slice(7);
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET); // verifies signature + expiry
     const user = await User.findById(decoded.userId);
     if (!user) return res.status(401).json({ error: 'User not found' });
     if (user.isBanned) return res.status(403).json({ error: 'Account banned', reason: user.banReason });
-    // Validate this is still the active session token
-    if (user.sessionToken !== token) {
-      return res.status(401).json({ error: 'Session expired — you were logged in elsewhere' });
-    }
     req.user = user;
     req.token = token;
     next();
@@ -152,7 +148,6 @@ app.post('/api/auth/register', async (req, res) => {
     const isAdmin = username.toLowerCase().trim() === ADMIN_USERNAME;
     const user = new User({ username: username.toLowerCase(), passwordHash, isAdmin });
     const token = signToken(user._id);
-    user.sessionToken = token;
     await user.save();
 
     res.json({
@@ -190,9 +185,7 @@ app.post('/api/auth/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // Invalidate old session — one session at a time
     const token = signToken(user._id);
-    user.sessionToken = token;
     user.lastSeen = new Date();
     await user.save();
 
@@ -215,9 +208,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // POST /api/auth/logout
 app.post('/api/auth/logout', authMiddleware, async (req, res) => {
-  req.user.sessionToken = null;
-  await req.user.save();
-  res.json({ ok: true });
+  res.json({ ok: true }); // JWT is stateless — client just drops the token
 });
 
 // GET /api/auth/me
@@ -353,7 +344,6 @@ app.post('/api/admin/ban', adminMiddleware, async (req, res) => {
 
   user.isBanned = true;
   user.banReason = reason || 'Banned by admin';
-  user.sessionToken = null;
   await user.save();
 
   kickUserWs(user._id.toString());
@@ -415,7 +405,6 @@ app.post('/api/admin/kick', adminMiddleware, async (req, res) => {
   const user = await User.findOne({ username: username.toLowerCase() });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  user.sessionToken = null;
   await user.save();
 
   kickUserWs(user._id.toString());
@@ -437,7 +426,6 @@ app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   user.passwordHash = await bcrypt.hash(newPassword, 12);
-  user.sessionToken = null;
   await user.save();
 
   kickUserWs(user._id.toString());
@@ -499,7 +487,7 @@ wss.on('connection', async (ws, req) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     user = await User.findById(decoded.userId);
-    if (!user || user.isBanned || user.sessionToken !== token) {
+    if (!user || user.isBanned) {
       ws.close(1008, 'Unauthorized');
       return;
     }
