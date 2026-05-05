@@ -860,9 +860,10 @@
 // ═══════════════════════════════════════════════
 //  CONFIG — point this at your Railway server URL
 // ═══════════════════════════════════════════════
-const SERVER_URL = 'https://luaforge-production-b226.up.railway.app'; // ← CHANGE THIS
+const SERVER_URL = 'https://luaforge-production-b226.up.railway.app';
 const WS_URL = SERVER_URL.replace('https://', 'wss://').replace('http://', 'ws://');
-
+const GROQ_API_KEY = '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';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const SYSTEM_ROBLOX = `You are LuaForge AI, an expert Roblox Lua scripting assistant. You know everything about Roblox Studio, LocalScripts, Scripts, ModuleScripts, and all Roblox services (TweenService, DataStoreService, RemoteEvents, RemoteFunctions, etc.). Always write clean, well-commented, working Roblox Lua code. Format ALL code in \`\`\`lua code blocks. Be concise and practical.`;
 
 // ═══════════════════════════════════════════════
@@ -1060,61 +1061,73 @@ function handleSessionExpired() {
 // ═══════════════════════════════════════════════
 //  CLAUDE API (proxied through Railway)
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 async function callClaude(messages, system, onStream, type, prompt) {
   const useStream = typeof onStream === 'function';
-  const body = {
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1500,
-    system: system || SYSTEM_ROBLOX,
-    messages,
-    stream: useStream,
-    type: type || 'codegen',
-    prompt: prompt || '',
-  };
 
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+  const groqMessages = [];
+  groqMessages.push({ role: 'system', content: system || SYSTEM_ROBLOX });
+  for (const m of messages) {
+    groqMessages.push({ role: m.role, content: m.content });
+  }
 
-  const res = await fetch(SERVER_URL + '/api/claude', { method: 'POST', headers, body: JSON.stringify(body) });
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + GROQ_API_KEY,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      max_tokens: 1500,
+      messages: groqMessages,
+      stream: useStream,
+    }),
+  });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    if (res.status === 401 && isRealSessionExpiry(err?.error)) handleSessionExpired();
-    throw new Error(err?.error || `HTTP ${res.status}`);
+    const err = await res.json().catch(function() { return {}; });
+    throw new Error((err && err.error && err.error.message) || ('Groq error ' + res.status));
   }
 
   if (!useStream) {
     const data = await res.json();
-    updateTokenCount(data.usage);
-    return data.content?.[0]?.text || '';
+    const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    updateTokenCount({ input_tokens: (data.usage && data.usage.prompt_tokens) || 0, output_tokens: (data.usage && data.usage.completion_tokens) || 0 });
+    return text;
   }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let full = '';
-  let inputTokens = 0, outputTokens = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
 
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
+    const result = await reader.read();
+    if (result.done) break;
+    const chunk = decoder.decode(result.value, { stream: true });
     const lines = chunk.split('\n');
-    for (const line of lines) {
-      if (!line.startsWith('data:')) continue;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.indexOf('data:') !== 0) continue;
       const json = line.slice(5).trim();
       if (json === '[DONE]') continue;
       try {
         const evt = JSON.parse(json);
-        if (evt.type === 'content_block_delta' && evt.delta?.text) { full += evt.delta.text; onStream(full); }
-        if (evt.type === 'message_delta' && evt.usage) outputTokens = evt.usage.output_tokens || 0;
-        if (evt.type === 'message_start' && evt.message?.usage) inputTokens = evt.message.usage.input_tokens || 0;
-      } catch {}
+        const delta = evt.choices && evt.choices[0] && evt.choices[0].delta && evt.choices[0].delta.content;
+        if (delta) { full += delta; onStream(full); }
+        if (evt.x_groq && evt.x_groq.usage) {
+          inputTokens = evt.x_groq.usage.prompt_tokens || 0;
+          outputTokens = evt.x_groq.usage.completion_tokens || 0;
+        }
+      } catch(e) {}
     }
   }
   updateTokenCount({ input_tokens: inputTokens, output_tokens: outputTokens });
   return full;
 }
 
-// ═══════════════════════════════════════════════
 //  WEBSOCKET (Studio Bridge)
 // ═══════════════════════════════════════════════
 function connectStudio() {

@@ -524,20 +524,43 @@ wss.on('connection', async (ws, req) => {
 });
 
 // Push generated script to Studio plugin via WebSocket
-app.post('/api/push-to-studio', authMiddleware, async (req, res) => {
-  const { code, scriptName } = req.body;
-  const ws = wsClients.get(req.user._id.toString());
+// In-memory store for pending scripts per user
+const pendingScripts = new Map();
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    return res.status(404).json({ error: 'Studio plugin not connected. Open the LuaForge plugin in Studio and connect.' });
+// POST /api/push-to-studio — website calls this when user clicks → Studio
+app.post('/api/push-to-studio', authMiddleware, async (req, res) => {
+  const { code, scriptName, scriptType } = req.body;
+  if (!code) return res.status(400).json({ error: 'No code provided' });
+
+  const scriptId = Date.now().toString();
+  pendingScripts.set(req.user._id.toString(), {
+    id: scriptId,
+    code,
+    name: scriptName || 'LuaForgeScript',
+    scriptType: scriptType || 'Script',
+    createdAt: Date.now(),
+  });
+
+  res.json({ ok: true, scriptId });
+});
+
+// GET /api/studio/poll — plugin calls this every 3 seconds
+app.get('/api/studio/poll', authMiddleware, async (req, res) => {
+  const userId = req.user._id.toString();
+  const pending = pendingScripts.get(userId);
+
+  // Clear scripts older than 5 minutes
+  if (pending && Date.now() - pending.createdAt > 5 * 60 * 1000) {
+    pendingScripts.delete(userId);
+    return res.json({ script: null });
   }
 
-  ws.send(JSON.stringify({
-    type: 'inject_script',
-    scriptName: scriptName || 'LuaForgeScript',
-    code,
-  }));
+  res.json({ script: pending || null });
+});
 
+// POST /api/studio/ack — plugin calls this after injecting to clear the queue
+app.post('/api/studio/ack', authMiddleware, async (req, res) => {
+  pendingScripts.delete(req.user._id.toString());
   res.json({ ok: true });
 });
 
