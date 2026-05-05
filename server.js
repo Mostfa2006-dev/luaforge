@@ -27,7 +27,7 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'luaforge_dev_secret_change_this';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const MONGODB_URI = process.env.MONGODB_URI;
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || 'admin').toLowerCase().trim();
 
 // ═══════════════════════════════════════════════
 //  MIDDLEWARE
@@ -149,7 +149,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Username already taken' });
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const isAdmin = username.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+    const isAdmin = username.toLowerCase().trim() === ADMIN_USERNAME;
     const user = new User({ username: username.toLowerCase(), passwordHash, isAdmin });
     const token = signToken(user._id);
     user.sessionToken = token;
@@ -243,12 +243,11 @@ app.post('/api/claude', authMiddleware, async (req, res) => {
     return res.status(500).json({ error: 'API key not configured on server' });
   }
 
-  // Update user stats
-  req.user.lastSeen = new Date();
-  if (type === 'chat') req.user.messagesCount += 1;
-  else req.user.scriptsGenerated += 1;
-  await req.user.save();
-
+  // Update user stats — use updateOne so sessionToken is NEVER touched
+  await User.updateOne(
+    { _id: req.user._id },
+    { $set: { lastSeen: new Date() }, $inc: type === 'chat' ? { messagesCount: 1 } : { scriptsGenerated: 1 } }
+  );
   // Save to history (non-blocking)
   if (type && prompt) {
     ScriptHistory.create({
@@ -552,6 +551,35 @@ app.post('/api/push-to-studio', authMiddleware, async (req, res) => {
   }));
 
   res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════
+//  ONE-TIME ADMIN FIX (run once then ignore)
+// ═══════════════════════════════════════════════
+// GET /api/fix-admins?secret=YOUR_JWT_SECRET
+// Call this once from browser to strip admin from everyone except ADMIN_USERNAME
+app.get('/api/fix-admins', async (req, res) => {
+  const { secret } = req.query;
+  if (secret !== JWT_SECRET) return res.status(403).json({ error: 'Wrong secret' });
+
+  // Strip admin from everyone who is NOT the admin username
+  const stripped = await User.updateMany(
+    { username: { $ne: ADMIN_USERNAME }, isAdmin: true },
+    { $set: { isAdmin: false } }
+  );
+
+  // Make sure the real admin IS admin
+  const promoted = await User.updateOne(
+    { username: ADMIN_USERNAME },
+    { $set: { isAdmin: true } }
+  );
+
+  res.json({
+    ok: true,
+    strippedAdminFrom: stripped.modifiedCount,
+    adminUsername: ADMIN_USERNAME,
+    adminPromoted: promoted.modifiedCount,
+  });
 });
 
 // ═══════════════════════════════════════════════
