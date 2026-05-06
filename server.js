@@ -527,7 +527,7 @@ wss.on('connection', async (ws, req) => {
 // In-memory store for pending scripts per user
 const pendingScripts = new Map();
 
-// POST /api/push-to-studio — website calls this when user clicks → Studio
+// POST /api/push-to-studio — website calls this when user clicks → Studio (legacy: scripts only)
 app.post('/api/push-to-studio', authMiddleware, async (req, res) => {
   const { code, scriptName, scriptType } = req.body;
   if (!code) return res.status(400).json({ error: 'No code provided' });
@@ -544,7 +544,24 @@ app.post('/api/push-to-studio', authMiddleware, async (req, res) => {
   res.json({ ok: true, scriptId });
 });
 
+// POST /api/push-blueprint — Auto Build sends a full blueprint (parts + GUIs + scripts)
+// The plugin will build everything using Instance.new() directly in Studio
+app.post('/api/push-blueprint', authMiddleware, async (req, res) => {
+  const { blueprint } = req.body;
+  if (!blueprint) return res.status(400).json({ error: 'No blueprint provided' });
+
+  const blueprintId = Date.now().toString();
+  pendingScripts.set(req.user._id.toString(), {
+    id: blueprintId,
+    blueprint: blueprint,          // full blueprint object
+    createdAt: Date.now(),
+  });
+
+  res.json({ ok: true, blueprintId });
+});
+
 // GET /api/studio/poll — plugin calls this every 3 seconds
+// Returns either { script } for legacy injections or { blueprint } for full builds
 app.get('/api/studio/poll', authMiddleware, async (req, res) => {
   const userId = req.user._id.toString();
   const pending = pendingScripts.get(userId);
@@ -552,10 +569,18 @@ app.get('/api/studio/poll', authMiddleware, async (req, res) => {
   // Clear scripts older than 5 minutes
   if (pending && Date.now() - pending.createdAt > 5 * 60 * 1000) {
     pendingScripts.delete(userId);
-    return res.json({ script: null });
+    return res.json({ script: null, blueprint: null });
   }
 
-  res.json({ script: pending || null });
+  if (!pending) return res.json({ script: null, blueprint: null });
+
+  // Blueprint mode (Auto Build full builds)
+  if (pending.blueprint) {
+    return res.json({ script: null, blueprint: pending });
+  }
+
+  // Legacy script-only mode
+  res.json({ script: pending, blueprint: null });
 });
 
 // POST /api/studio/ack — plugin calls this after injecting to clear the queue
