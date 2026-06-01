@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22LuaForge%22%2C%22short_name%22%3A%22LuaForge%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230d1117%22%2C%22theme_color%22%3A%22%233b82f6%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgo%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+  <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LuaForge — Roblox Lua AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1477,16 +1478,93 @@ const SERVER_URL = 'https://luaforge-production-b226.up.railway.app';
 const WS_URL = SERVER_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
 // ── AI Provider Keys ─────────────────────────
+// ─── Session state persistence ───────────────────────────────────────────────
+// Saves chatHistory and totalTokensUsed across page refreshes.
+const SESSION_STATE_KEY = 'lf_session_state';
+function saveSessionState() {
+  try {
+    localStorage.setItem(SESSION_STATE_KEY, JSON.stringify({
+      totalTokensUsed: typeof totalTokensUsed !== 'undefined' ? totalTokensUsed : 0,
+      savedAt: Date.now(),
+    }));
+  } catch {}
+}
+function loadSessionState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_STATE_KEY) || '{}');
+    // Only restore if saved within last 24h
+    if (s.savedAt && (Date.now() - s.savedAt) < 86400000) return s;
+  } catch {}
+  return {};
+}
+window.addEventListener('beforeunload', saveSessionState);
+
+// ─── AI Provider Keys ─────────────────────────────────────────────────────────
 // Keys are stored in localStorage — never hardcoded.
 // Users enter them once via the settings panel in the UI.
+// NOTE: localStorage is origin-scoped. For higher security, consider a server-side
+// key vault. Keys are only used client-side for Gemini (Groq/Cerebras/Together go
+// through the backend proxy which uses server-side env vars).
 let GROQ_API_KEY   = localStorage.getItem('luaforge_groq_key')   || '';
 let GEMINI_API_KEY = localStorage.getItem('luaforge_gemini_key') || '';
 let HF_API_KEY     = localStorage.getItem('luaforge_hf_key')     || '';
+
+// Restore persisted session state
+const _restoredState = loadSessionState();
 
 function saveApiKeys() {
   localStorage.setItem('luaforge_groq_key',   GROQ_API_KEY);
   localStorage.setItem('luaforge_gemini_key', GEMINI_API_KEY);
   localStorage.setItem('luaforge_hf_key',     HF_API_KEY);
+}
+
+// ─── Project export / import ─────────────────────────────────────────────────
+function exportProject() {
+  const chatKey = typeof CHAT_STORAGE_KEY !== 'undefined' ? CHAT_STORAGE_KEY : 'lf_chat';
+  // Collect all generated scripts saved in localStorage
+  const savedScripts = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('lf_script_') || k.startsWith('luaforge_script_'))) {
+      try { savedScripts[k] = localStorage.getItem(k); } catch {}
+    }
+  }
+  const data = {
+    version: '3.2',
+    exportedAt: new Date().toISOString(),
+    chatHistory: JSON.parse(localStorage.getItem(chatKey) || '[]'),
+    savedScripts,
+    apiKeys: {
+      groq: GROQ_API_KEY ? '[set]' : '',
+      gemini: GEMINI_API_KEY ? '[set]' : '',
+    },
+    sessionState: loadSessionState(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'luaforge-project-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importProject(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version) throw new Error('Invalid LuaForge export file');
+      const chatKey = typeof CHAT_STORAGE_KEY !== 'undefined' ? CHAT_STORAGE_KEY : 'lf_chat';
+      if (data.chatHistory?.length) localStorage.setItem(chatKey, JSON.stringify(data.chatHistory));
+      if (data.savedScripts) {
+        for (const [k, v] of Object.entries(data.savedScripts)) {
+          try { localStorage.setItem(k, v); } catch {}
+        }
+      }
+      alert('Project imported! Refresh to load data.');
+    } catch (err) { alert('Import failed: ' + err.message); }
+  };
+  reader.readAsText(file);
 }
 
 function openApiKeysModal() {
@@ -1987,6 +2065,12 @@ function connectStudio() {
         const msg = JSON.parse(e.data);
         if (msg.type === 'connected') { setStudioStatus(true); }
         if (msg.type === 'kicked') { setStudioStatus(false); } // WS kick = Studio disconnected only, not account logout
+        if (msg.type === 'token_expired') {
+          setStudioStatus(false);
+          // Force logout — token expired server-side
+          logout();
+          showToast('Session expired — please sign in again', 'error');
+        }
         if (msg.type === 'pong') {}
       } catch {}
     };
@@ -3916,6 +4000,41 @@ function resetSync() {
   const out = document.getElementById('sync-output');
   out.className = 'output-box empty';
   out.textContent = out.dataset.placeholder;
+}
+</script>
+
+<script>
+// ─── Service Worker: offline shell cache ─────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE = 'luaforge-shell-v2';
+const SHELL = ['/', '/index.html'];
+// Cache strategy: network-first for API, cache-first for shell assets
+self.addEventListener('install', e => e.waitUntil(
+  caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+));
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(
+    keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+  )));
+});
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Never cache API or WebSocket calls
+  if (url.pathname.startsWith('/api/') || url.protocol === 'ws:' || url.protocol === 'wss:') return;
+  e.respondWith(
+    fetch(e.request).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, clone));
+      return res;
+    }).catch(() => caches.match(e.request))
+  );
+});
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
 }
 </script>
 </body>
